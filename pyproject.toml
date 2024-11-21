@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "json-cache"
+version = "1.0.0"
+description = "A Python package to cache class properties and function results in JSON files."
+readme = "README.md"
+authors = [
+    { name = "Arved Klöhn", email = "arved.kloehn@gmail.com" }
+]
+license = { text = "MIT" }
+keywords = ["cache", "json", "decorator", "ttl", "data storage"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities"
+]
+requires-python = ">=3.7"
+
+dependencies = [
+    "python-slugify",
+    "logorator",
+]
+
+[project.urls]
+Source = "https://github.com/Redundando/json_cache"
+
+[tool.setuptools.packages.find]
+where = ["."]
