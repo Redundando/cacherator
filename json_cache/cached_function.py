@@ -127,7 +127,6 @@ class Cached:
             If specified as a `timedelta`, it directly represents the TTL duration.
     """
 
-
     def __init__(self, ttl: float | int | timedelta = None):
         """
         Initializes the `Cached` decorator with an optional TTL.
@@ -204,6 +203,7 @@ class Cached:
         Returns:
             Callable: The wrapped function with caching behavior.
         """
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             """

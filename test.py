@@ -1,9 +1,11 @@
-from json_cache.json_cache import json_cache
-from logorator import Logger
-import pandas as pd
-import numpy as np
-
 import datetime
+
+import numpy as np
+import pandas as pd
+from logorator import Logger
+
+from json_cache.json_cache import json_cache
+
 
 @json_cache(clear_cache=False)
 class MyClass:
@@ -12,12 +14,11 @@ class MyClass:
         self.data_id = "Jupiter"
         self.weight = 77
 
-
     def calculation(self, x=2, y=10):
-        return x**y
+        return x ** y
 
     @Logger()
-    def long_calc(self, n = 10):
+    def long_calc(self, n=10):
         result = []
         for i in range(1, n):
             for j in range(1, n):
