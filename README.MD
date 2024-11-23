@@ -1,6 +1,6 @@
-# json-cache
+# Cacherator
 
-json-cache is a Python package that provides decorators to cache class properties and function results in JSON files. This is particularly useful for classes that perform expensive computations or make external API calls, allowing results to persist across program executions.
+Cacherator is a Python package that provides decorators to cache class properties and function results in JSON files. This is particularly useful for classes that perform expensive computations or make external API calls, allowing results to persist across program executions.
 
 ## Features
 
@@ -14,7 +14,7 @@ json-cache is a Python package that provides decorators to cache class propertie
 
 Install the package using pip:
 ```bash
-pip install json-cache
+pip install cacherator
 ```
 ## Usage
 
@@ -22,7 +22,7 @@ pip install json-cache
 Use the `json_cache` decorator to enable caching for a class.
 
 ```python
-from json_cache import json_cache
+from cacherator import json_cache
 
 @json_cache(ttl=1)
 class ExampleClass:
@@ -55,6 +55,6 @@ Every function in the decorated class automatically accepts two additional named
 This project is licensed under the MIT License.
 
 ## Contact
-For questions or suggestions, please open an issue on the [GitHub repository](https://github.com/Redundando/json_cache).
+For questions or suggestions, please open an issue on the [GitHub repository](https://github.com/Redundando/cacherator).
 
 

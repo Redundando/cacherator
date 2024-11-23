@@ -37,14 +37,6 @@ class CachedFunction:
         self.func = func
         self.args = args
         self.kwargs = kwargs
-        self.override_ttl = None
-        if "cache_ttl" in kwargs.keys():
-            self.override_ttl = kwargs["cache_ttl"]
-            kwargs.pop("cache_ttl")
-        self.clear_cache = False
-        if "clear_cache" in kwargs.keys():
-            self.clear_cache = kwargs["clear_cache"]
-            kwargs.pop("clear_cache")
 
     @cached_property
     def self_item(self):
@@ -96,9 +88,9 @@ class CachedFunction:
         Returns:
             str: A unique identifier for the function call.
         """
-        if len(self.function_name_with_args) < 256:
+        if len(self.function_name_with_args) < 180:
             return self.function_name_with_args
-        return f"{self.func.__name__}_{self.function_hash}"
+        return f"{self.function_name_with_args[:149]}_{self.function_hash}"
 
     def run(self):
         """
@@ -114,47 +106,23 @@ class CachedFunction:
 
 
 class Cached:
-    """
-    A decorator for caching the results of class instance methods.
 
-    The `Cached` decorator stores function results in an in-memory cache
-    (specific to the instance of the class) and reuses these results for
-    subsequent calls with the same arguments within a defined time-to-live (TTL).
-
-    Attributes:
-        ttl (Optional[float | int | timedelta]): The time-to-live (TTL) for cached results.
-            If specified as a float or int, it represents the TTL in days.
-            If specified as a `timedelta`, it directly represents the TTL duration.
-    """
-
-    def __init__(self, ttl: float | int | timedelta = None):
-        """
-        Initializes the `Cached` decorator with an optional TTL.
-
-        Args:
-            ttl (Optional[float | int | timedelta]): The time-to-live (TTL) for cached results.
-                If specified as a float or int, it represents the TTL in days.
-                If specified as a `timedelta`, it directly represents the TTL duration.
-                Defaults to None, indicating no expiration.
-        """
+    def __init__(self, ttl: float | int | timedelta = None, clear_cache: bool = False):
         self.cached_function: CachedFunction | None = None
+        self.clear_cache = clear_cache
         self.ttl = ttl
+        self.run_function_signatures = []
 
     @property
     def max_delta(self):
-        """
-        Computes the maximum time delta for the TTL.
-
-        Converts the TTL attribute to a `timedelta` object if it is specified
-        as a float or int. If TTL is already a `timedelta`, it is returned as-is.
-
-        Returns:
-            timedelta: The TTL as a `timedelta` object, or None if TTL is not set.
-        """
-        max_delta = self.ttl
-        if isinstance(self.ttl, (int, float)):
-            max_delta = timedelta(days=max_delta)
-        return max_delta
+        if self.ttl is None:
+            ttl = self.cached_function.self_item._json_cache_ttl
+        else:
+            ttl = self.ttl
+        if isinstance(ttl, (int, float)):
+            return timedelta(days=ttl)
+        else:
+            return ttl
 
     def store_in_class_cache(self):
         """
@@ -212,12 +180,6 @@ class Cached:
             Retrieves the cached result if available and valid. Otherwise, computes
             the result, stores it in the cache, and returns the computed value.
 
-            Args:
-                *args: Positional arguments for the function call.
-                **kwargs: Keyword arguments for the function call. Special keywords:
-                    - "cache_ttl": Overrides the default TTL for this call.
-                    - "clear_cache": Clears the cache before executing the function.
-
             Returns:
                 Any: The function result, either from the cache or freshly computed.
             """
@@ -228,17 +190,15 @@ class Cached:
             # Attempt to retrieve the result from the cache
             retrieve_from_cache = self.retrieve_from_class_cache()
 
-            # Use custom TTL if provided
-            if self.cached_function.override_ttl is not None:
-                self.ttl = self.cached_function.override_ttl
+            has_run_this_execution = self.cached_function.function_signature in self.run_function_signatures
+            can_retrieve_from_cache = not self.clear_cache or has_run_this_execution
 
             # If clear_cache is not set, the cache exists, and is within TTL, return the cached value
-            if not self.cached_function.clear_cache and retrieve_from_cache is not None and retrieve_from_cache[
-                'date'] + self.max_delta > datetime.now():
+            if can_retrieve_from_cache and retrieve_from_cache is not None and retrieve_from_cache['date'] + self.max_delta > datetime.now():
                 return retrieve_from_cache['value']
-
             # Otherwise, compute the result and store it in the cache before returning
             entry = self.store_in_class_cache()
+            self.run_function_signatures.append(self.cached_function.function_signature)
             return entry['value']
 
         return wrapper

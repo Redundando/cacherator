@@ -3,15 +3,15 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "json-cache"
-version = "1.0.0"
-description = "A Python package to cache class properties and function results in JSON files."
+name = "cacherator"
+version = "1.0.1"
+description = "A Python library for persistent JSON-based caching of class state and function results."
 readme = "README.md"
 authors = [
     { name = "Arved Klöhn", email = "arved.kloehn@gmail.com" }
 ]
 license = { text = "MIT" }
-keywords = ["cache", "json", "decorator", "ttl", "data storage"]
+keywords = ["cache", "json", "decorator", "data storage"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.urls]
-Source = "https://github.com/Redundando/json_cache"
+Source = "https://github.com/Redundando/cacherator"
 
 [tool.setuptools.packages.find]
 where = ["."]
