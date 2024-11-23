@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cacherator"
-version = "1.0.1"
+version = "1.0.2"
 description = "A Python library for persistent JSON-based caching of class state and function results."
 readme = "README.md"
 authors = [
     { name = "Arved Klöhn", email = "arved.kloehn@gmail.com" }
 ]
 license = { text = "MIT" }
-keywords = ["cache", "json", "decorator", "data storage"]
+keywords = ["cache", "json", "data storage"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

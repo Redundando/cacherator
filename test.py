@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from logorator import Logger
 
-from cacharator.cacherator import JSONCache, Cached
+from cacherator.cacherator import JSONCache, Cached
 
 
 class MyClass:
