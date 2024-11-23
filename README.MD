@@ -52,7 +52,7 @@ class MyClass(JSONCache):
             data_id=data_id,
             directory="custom/cache/dir",
             clear_cache=False,
-            ttl=timedelta(hours=1),
+            ttl=timedelta(days=999),
             logging=True
         )
 
