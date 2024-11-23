@@ -53,6 +53,8 @@ class JSONCache:
 
     """
 
+
+
     def __init__(self,
                  data_id: str = None,
                  directory: str = "json/data",
@@ -87,10 +89,12 @@ class JSONCache:
         self._json_cache_recent_save_data = {}
         self._json_cache_func_cache = {}
         self._json_cache_directory = directory
-        self._json_cache_data_id = data_id
+        self._json_cache_data_id = data_id or self.__class__.__name__
         self._json_cache_ttl = ttl
         self._json_cache_clear_cache = clear_cache
         self._json_cache_logging = logging
+        self._json_cache_last_accessed = datetime.datetime.now()
+
         if not self._json_cache_clear_cache:
             self._json_cache_load()
         weakref.finalize(self, self._json_cache_save)
@@ -195,7 +199,7 @@ class JSONCache:
         result["_json_cache_func_cache"] = dict(sorted(result["_json_cache_func_cache"].items()))
         return dict(sorted(result.items()))
 
-    def _json_cache_save(self, closing=True):
+    def _json_cache_save(self):
         """
         Saves the current state of the object, including cached data, to a JSON file.
 
@@ -225,11 +229,11 @@ class JSONCache:
         if self._json_cache_logging:
             log_decorator = Logger(override_function_name=f"Saving to {self._json_cache_directory}", mode="short")
             save_method = log_decorator(self._json_cache_save_inner)
-            save_method(closing=closing)
+            save_method()
         else:
-            self._json_cache_save_inner(closing=closing)
+            self._json_cache_save_inner()
 
-    def _json_cache_save_inner(self, closing=True):
+    def _json_cache_save_inner(self):
         try:
             json_data = self._json_cache_data()
 
@@ -242,10 +246,6 @@ class JSONCache:
 
             with open(self._json_cache_filename_with_path, "w", encoding="utf8") as f:
                 json.dump(json_data, f, indent=4, ensure_ascii=False, cls=DateTimeEncoder)
-
-            # Update the recent save data only if closing is False
-            if not closing:
-                self._json_cache_recent_save_data = json_data.copy()
 
         except PermissionError as e:
             Logger.note(f"Permission error saving cache file {self._json_cache_filename_with_path}: {str(e)}",

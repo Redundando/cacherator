@@ -11,7 +11,7 @@ from cacharator.cacherator import JSONCache, Cached
 class MyClass:
 
     def __init__(self):
-        self.data_id = "Jupiter"
+        #self.data_id = "Jupiter"
         self.weight = 77
 
     def calculation(self, x=2, y=10):
@@ -43,7 +43,7 @@ class MyClass:
 
 class BigClass(JSONCache):
     def __init__(self):
-        JSONCache.__init__(self, data_id="BIG_1")
+        JSONCache.__init__(self)
         self.name = "BIG"
 
     @Cached(clear_cache=True)
