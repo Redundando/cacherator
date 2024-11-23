@@ -1,60 +1,90 @@
 # Cacherator
 
-Cacherator is a Python package that provides decorators to cache class properties and function results in JSON files. This is particularly useful for classes that perform expensive computations or make external API calls, allowing results to persist across program executions.
+Cacherator is a Python package that provides persistent caching functionality for your Python classes and functions. It allows you to easily cache function results to disk, improving performance for expensive computations or API calls.
 
 ## Features
 
-- Persistent Caching: Automatically saves and loads class properties and method results to and from JSON files.
-- Time-to-Live (TTL) Support: Define how long cached results remain valid.
-- Automatic Serialization: Handles JSON serialization of common data types, including datetime objects.
-- Customizable Storage: Specify the directory and filename for cached data.
-- Logging: Optional logging of cache operations for easier debugging and monitoring.
+- Persistent caching of function results
+- Customizable Time-To-Live (TTL) for cached data
+- Option to clear cache on demand
+- JSON-based storage for easy inspection and portability
+- Automatic serialization and deserialization of cached data
+- Support for instance methods and properties
 
 ## Installation
 
-Install the package using pip:
+You can install PyCacherator using pip:
+
 ```bash
 pip install cacherator
 ```
+
 ## Usage
 
-### Decorating a Class with `json_cache`
-Use the `json_cache` decorator to enable caching for a class.
+### Basic Usage
+
+To use Cacherator, simply inherit from the `JSONCache` class and use the `@Cached` decorator on your methods:
 
 ```python
-from cacherator import json_cache
+from cacherator import JSONCache, Cached
 
-@json_cache(ttl=1)
-class ExampleClass:
-    def __init__(self, example_id="example"):
-        self.data_id = example_id
+class MyClass(JSONCache):
+    def __init__(self, data_id):
+        super().__init__(data_id=data_id)
 
-    def expensive_method(self, x):
-        # Simulate an expensive computation
-        return x ** 2
-
-# Usage
-obj = ExampleClass(example_id="example_1")
-result = obj.expensive_method(5)  # Calls the method and caches the result
+    @Cached()
+    def expensive_operation(self, arg1, arg2):
+        # Your expensive computation here
+        return result
 ```
 
-When a method from a decorated class object is called again with the same arguments, the cached result will be used as long as the time-to-live of the cache is not exceeded. When the class object is closed (usually when the program ends), the cache will be written to a json file. When the class object is initialized the next time, the stored json will be loaded into the cache.    
+### Customizing Cache Behavior
 
-### Parameters for json_cache
-- `data_id` (str, optional): Unique identifier for the JSON file. Defaults to the class name.
-- `directory` (str, optional): Directory where the JSON file will be saved. Defaults to "json/data".
-- `clear_cache` (bool, optional): If True, clears any existing cache when initializing the object. Defaults to False.
-- `ttl` (float | int | timedelta, optional): Time-to-live for cached function results. Defaults to 999 days.
-- `logging` (bool, optional): If True, enables logging of save/load operations. Defaults to True.
+You can customize the caching behavior by passing arguments to the `JSONCache` constructor and the `@Cached` decorator:
 
-Every function in the decorated class automatically accepts two additional named arguments:
-- `clear_cache` (bool, optional): If True, clears any existing cache of this function. Defaults to False.
-- `ttl` (float | int | timedelta, optional): Set time-to-live for this specific function. Defaults to the class decorator ttl.
+```python
+from datetime import timedelta
+from cacherator import JSONCache, Cached
+
+class MyClass(JSONCache):
+    def __init__(self, data_id):
+        super().__init__(
+            data_id=data_id,
+            directory="custom/cache/dir",
+            clear_cache=False,
+            ttl=timedelta(hours=1),
+            logging=True
+        )
+
+    @Cached(ttl=300, clear_cache=False)
+    def cached_method(self, arg):
+        # Method implementation
+        return result
+```
+
+## API Reference
+
+### JSONCache
+
+The base class for objects with caching capabilities.
+
+#### Parameters:
+
+- `data_id` (str): Unique identifier for the cache instance.
+- `directory` (str): Directory to store cache files (default: "json/data").
+- `clear_cache` (bool): Whether to clear existing cache on instantiation (default: False).
+- `ttl` (timedelta | int | float): Default Time-To-Live for cached data (default: 999 days).
+- `logging` (bool): Enable logging of cache operations (default: True).
+
+### @Cached
+
+Decorator for caching method results.
+
+#### Parameters:
+
+- `ttl` (float | int | timedelta): Time-To-Live for the cached result (defaults to the ttl set on object level).
+- `clear_cache` (bool): Whether to clear existing cache before execution (default: False).
 
 ## License
+
 This project is licensed under the MIT License.
-
-## Contact
-For questions or suggestions, please open an issue on the [GitHub repository](https://github.com/Redundando/cacherator).
-
-
