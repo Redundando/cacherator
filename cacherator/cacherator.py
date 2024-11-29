@@ -135,14 +135,9 @@ class JSONCache:
 
     def _json_cache_data(self):
         """
-        Collects all JSON-serializable data from the class instance for caching.
+        Collects all JSON-serializable cached function data from the class instance for caching.
 
-        This method aggregates:
-        1. **Instance attributes**:
-           - Non-callable attributes of the instance that are JSON-serializable.
-        2. **Class properties**:
-           - Properties defined at the class level that are JSON-serializable.
-        3. **Cached function results**:
+        **Cached function results**:
            - Results of methods decorated with the `Cached` decorator, stored in `_json_cache_func_cache`.
 
         The collected data is structured into a dictionary, which can be serialized into
@@ -160,38 +155,15 @@ class JSONCache:
                         "date": "2024-11-21T10:30:00.000000"
                     }
                 },
-                "attribute1": "value1",
-                "attribute2": 42
             }
 
         Notes:
             - Excludes attributes and properties that:
-                - Start with `__` (private or special methods/attributes).
-                - Start with `_json_cache_` (internal cache-related attributes).
                 - Are non-JSON-serializable (e.g., functions, complex objects).
-            - Ensures all included values are JSON-serializable by using the `is_jsonable` utility.
 
-        Raises:
-            None explicitly, but ensures only serializable attributes are included to avoid JSON encoding errors.
         """
 
-        instance_properties = {
-            name: getattr(self, name)
-            for name in dir(self)
-            if not name.startswith("__") and
-               not name.startswith("_json_cache_") and
-               not callable(getattr(self, name)) and
-               is_jsonable(getattr(self, name))
-        }
-        class_properties = {
-            name: getattr(self, name)
-            for name, member in inspect.getmembers(type(self))
-            if isinstance(member, property) and
-               not name.startswith("_json_cache_")
-               and is_jsonable(member)
-        }
-        all_properties = {**class_properties, **instance_properties}
-        result: dict = {"_json_cache_func_cache": {}} | all_properties
+        result: dict = {"_json_cache_func_cache": {}}
 
         for key in self._json_cache_func_cache:
             if not key.startswith("_json_cache_") and is_jsonable(self._json_cache_func_cache[key]):
