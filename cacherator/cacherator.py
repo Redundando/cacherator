@@ -24,6 +24,8 @@ def is_jsonable(x):
         return False
 
 
+
+
 class JSONCache:
     """
     A base class for managing persistent caching of object state and function results in JSON files.
@@ -133,6 +135,17 @@ class JSONCache:
                 ("/" if self._json_cache_directory and self._json_cache_directory[-1] != "/" else "") +
                 slugify(filename) + ".json")
 
+    @property
+    def _cached_variables(self) -> dict:
+        result = {
+                k: v for k, v in vars(self).items()
+                if not isinstance(getattr(type(self), k, None), property) and
+                   not k.startswith("_json_cache") and
+                   is_jsonable(v)
+        }
+
+        return dict(sorted(result.items()))
+
     def _json_cache_data(self):
         """
         Collects all JSON-serializable cached function data from the class instance for caching.
@@ -163,7 +176,7 @@ class JSONCache:
 
         """
 
-        result: dict = {"_json_cache_func_cache": {}}
+        result: dict = {"_json_cache_func_cache": {}, "_json_cache_variable_cache": self._cached_variables}
 
         for key in self._json_cache_func_cache:
             if not key.startswith("_json_cache_") and is_jsonable(self._json_cache_func_cache[key]):
@@ -286,6 +299,8 @@ class JSONCache:
             return
 
         try:
+            for key, value in data["_json_cache_variable_cache"].items():
+                setattr(self, key, value)
             for key, value in data["_json_cache_func_cache"].items():
                 self._json_cache_func_cache[key] = value
                 # Convert "date" strings back to datetime objects
@@ -293,6 +308,7 @@ class JSONCache:
                     self._json_cache_func_cache[key]["date"] = datetime.datetime.strptime(
                         value["date"], "%Y-%m-%dT%H:%M:%S.%f"
                     )
+
         except KeyError as e:
             Logger.note(f"KeyError while loading cache data: {str(e)}", mode="short")
         except ValueError as e:

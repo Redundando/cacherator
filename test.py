@@ -1,6 +1,6 @@
 import datetime
 import time
-
+import inspect
 import numpy as np
 import pandas as pd
 from logorator import Logger
@@ -13,6 +13,8 @@ class MyClass:
     def __init__(self):
         #self.data_id = "Jupiter"
         self.weight = 77
+
+
 
     def calculation(self, x=2, y=10):
         return x ** y
@@ -46,7 +48,8 @@ class BigClass(JSONCache):
         JSONCache.__init__(self)
         self.name = "BIG"
 
-    @Cached(clear_cache=True)
+
+    @Cached()
     @Logger(mode="short")
     def calculation(self, x=2, y=10):
         time.sleep(0.5)
@@ -59,12 +62,21 @@ class BigClass(JSONCache):
                 result.append(self.calculation(i, j))
         return result
 
+    @property
+    @Cached()
+    def num_info(self):
+        print("CALLING")
+        return 555
+
 bc = BigClass()
-#print(bc.list_wrapped_methods(wrapper_attribute="clear_cache"))
-print(bc.calculation(x=9))
-print(bc.calculation(x=10))
-print(bc.calculation(x=9))
-print(bc.calculation(x=10))
+#bc.kl = 99
+#self_vars = {
+#    k: v for k, v in vars(bc).items()
+#    if not isinstance(getattr(type(bc), k, None), property)
+#}
+
+print(bc._cached_variables)
+
 
 # Usage
 
