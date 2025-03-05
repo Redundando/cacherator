@@ -99,7 +99,7 @@ class JSONCache:
 
         if not self._json_cache_clear_cache:
             self._json_cache_load()
-        weakref.finalize(self, self._json_cache_save)
+        weakref.finalize(self, self.json_cache_save)
 
     def __str__(self):
         return self._json_cache_data_id
@@ -137,13 +137,14 @@ class JSONCache:
 
     @property
     def _cached_variables(self) -> dict:
+        excluded = getattr(self, "_excluded_cache_vars", [])
         result = {
                 k: v for k, v in vars(self).items()
                 if not isinstance(getattr(type(self), k, None), property) and
                    not k.startswith("_json_cache") and
+                   k not in excluded and
                    is_jsonable(v)
         }
-
         return dict(sorted(result.items()))
 
     def _json_cache_data(self):
@@ -184,7 +185,7 @@ class JSONCache:
         result["_json_cache_func_cache"] = dict(sorted(result["_json_cache_func_cache"].items()))
         return dict(sorted(result.items()))
 
-    def _json_cache_save(self):
+    def json_cache_save(self):
         """
         Saves the current state of the object, including cached data, to a JSON file.
 
