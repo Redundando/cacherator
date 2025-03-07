@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cacherator"
-version = "1.0.8"
+version = "1.0.9"
 description = "A Python library for persistent JSON-based caching of class state and function results."
 readme = "README.md"
 authors = [
