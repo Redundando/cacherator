@@ -45,8 +45,8 @@ class MyClass:
 
 class BigClass(JSONCache):
     def __init__(self):
-        JSONCache.__init__(self)
-        self.name = "BIG"
+        JSONCache.__init__(self, ttl=0)
+        self.another_name = "SMALL"
 
 
     @Cached()

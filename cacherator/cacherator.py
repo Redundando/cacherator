@@ -59,7 +59,7 @@ class JSONCache:
 
     def __init__(self,
                  data_id: str = None,
-                 directory: str = "json/data",
+                 directory: str = "data/cache",
                  clear_cache: bool = False,
                  ttl: timedelta | int | float = 999,
                  logging: bool = True):
@@ -177,7 +177,7 @@ class JSONCache:
 
         """
 
-        result: dict = {"_json_cache_func_cache": {}, "_json_cache_variable_cache": self._cached_variables}
+        result: dict = {"_json_cache_func_cache": {}, "_json_cache_variable_cache": self._cached_variables, "_json_cache_last_save_date": datetime.datetime.now()}
 
         for key in self._json_cache_func_cache:
             if not key.startswith("_json_cache_") and is_jsonable(self._json_cache_func_cache[key]):
@@ -300,8 +300,18 @@ class JSONCache:
             return
 
         try:
-            for key, value in data["_json_cache_variable_cache"].items():
-                setattr(self, key, value)
+            load_variables_from_cache = False
+            if data.get("_json_cache_last_save_date") is not None:
+                last_save_date = datetime.datetime.strptime(
+                        data["_json_cache_last_save_date"], "%Y-%m-%dT%H:%M:%S.%f")
+                ttl = self._json_cache_ttl
+                if isinstance(ttl, (int, float)):
+                    ttl = timedelta(days=ttl)
+                    if last_save_date  + ttl > datetime.datetime.now():
+                        load_variables_from_cache = True
+            if load_variables_from_cache:
+                for key, value in data["_json_cache_variable_cache"].items():
+                    setattr(self, key, value)
             for key, value in data["_json_cache_func_cache"].items():
                 self._json_cache_func_cache[key] = value
                 # Convert "date" strings back to datetime objects
