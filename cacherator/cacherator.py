@@ -14,9 +14,7 @@ from .date_time_encoder import DateTimeEncoder
 
 
 def is_jsonable(x):
-    """
-    Checks if an object is JSON-serializable.
-    """
+    """Checks if an object is JSON-serializable."""
     try:
         json.dumps(x, cls=DateTimeEncoder)
         return True
@@ -30,32 +28,24 @@ class JSONCache:
     """
     A base class for managing persistent caching of object state and function results in JSON files.
 
-    The `JSONCache` class provides functionality to serialize and store an object's state and cached
-    function results to a JSON file, and load them when the object is initialized. It is particularly
-    useful for classes that require expensive computations or need to persist data across program
-    executions.
-
     Attributes:
         data_id (str): A unique identifier for the cached file. Defaults to the class name if not provided.
-        directory (str): Directory where the JSON cache files will be stored. Defaults to "json/data".
+        directory (str): Directory where the JSON cache files will be stored. Defaults to "data/cache".
         clear_cache (bool): Whether to clear the existing cache upon initialization. Defaults to `False`.
         ttl (timedelta | int | float): Time-to-live (TTL) for cached function results. Defaults to 999 days.
         logging (bool): Whether to enable logging of cache operations. Defaults to `True`.
-
-    Methods:
-        _json_cache_data(): Collects JSON-serializable data from the object, including attributes
-            and cached function results.
-        _json_cache_save(closing=True): Saves the object's state and cache to a JSON file.
-        _json_cache_load(): Loads the object's state and cache from the JSON file, if it exists.
-
-    Notes:
-        - Automatically saves the object's state to the JSON file upon garbage collection.
-        - Excludes non-JSON-serializable attributes from the cache.
-        - Uses a TTL to determine the validity of cached function results.
-
     """
 
+    _global_logging_enabled = True
 
+    @classmethod
+    def set_logging(cls, enabled: bool):
+        """Set logging globally for all JSONCache instances.
+        
+        Args:
+            enabled (bool): True to enable logging, False to disable.
+        """
+        cls._global_logging_enabled = enabled
 
     def __init__(self,
                  data_id: str = None,
@@ -73,9 +63,9 @@ class JSONCache:
 
         Args:
             data_id (str, optional): A unique identifier for the cached file. If not provided,
-                defaults to the class name. Recommended to specify this in subclasses for unique instances.
+                defaults to the class name.
             directory (str, optional): The directory where the JSON cache files will be stored.
-                Defaults to "json/data".
+                Defaults to "data/cache".
             clear_cache (bool, optional): Whether to clear any existing cache when initializing
                 the object. If `True`, starts with a fresh cache. Defaults to `False`.
             ttl (timedelta | int | float, optional): Time-to-live (TTL) for cached function results.
@@ -84,7 +74,7 @@ class JSONCache:
                 If `True`, log messages are generated during cache operations. Defaults to `True`.
 
         Notes:
-            - Automatically finalizes the object by saving the cache to a JSON file upon garbage collection.
+            - Automatically saves the cache to a JSON file upon garbage collection.
             - Creates the cache directory if it does not exist.
 
         """
@@ -94,7 +84,7 @@ class JSONCache:
         self._json_cache_data_id = data_id or self.__class__.__name__
         self._json_cache_ttl = ttl
         self._json_cache_clear_cache = clear_cache
-        self._json_cache_logging = logging
+        self._json_cache_logging = logging and self._global_logging_enabled
         self._json_cache_last_accessed = datetime.datetime.now()
 
         if not self._json_cache_clear_cache:
@@ -149,35 +139,18 @@ class JSONCache:
 
     def _json_cache_data(self):
         """
-        Collects all JSON-serializable cached function data from the class instance for caching.
-
-        **Cached function results**:
-           - Results of methods decorated with the `Cached` decorator, stored in `_json_cache_func_cache`.
-
-        The collected data is structured into a dictionary, which can be serialized into
-        JSON for persistence. Cached function results are nested under the `_json_cache_func_cache` key.
+        Collects all JSON-serializable cached data from the class instance.
 
         Returns:
-            dict: A dictionary containing all JSON-serializable instance attributes,
-            class properties, and cached function results.
-
-        Example Output:
-            {
-                "_json_cache_func_cache": {
-                    "expensive_method{'x': 10}": {
-                        "value": 100,
-                        "date": "2024-11-21T10:30:00.000000"
-                    }
-                },
-            }
-
-        Notes:
-            - Excludes attributes and properties that:
-                - Are non-JSON-serializable (e.g., functions, complex objects).
-
+            dict: A dictionary containing cached function results, instance variables,
+            and last save timestamp.
         """
 
-        result: dict = {"_json_cache_func_cache": {}, "_json_cache_variable_cache": self._cached_variables, "_json_cache_last_save_date": datetime.datetime.now()}
+        result: dict = {
+            "_json_cache_func_cache": {},
+            "_json_cache_variable_cache": self._cached_variables,
+            "_json_cache_last_save_date": datetime.datetime.now()
+        }
 
         for key in self._json_cache_func_cache:
             if not key.startswith("_json_cache_") and is_jsonable(self._json_cache_func_cache[key]):
@@ -186,31 +159,7 @@ class JSONCache:
         return dict(sorted(result.items()))
 
     def json_cache_save(self):
-        """
-        Saves the current state of the object, including cached data, to a JSON file.
-
-        This method serializes the following data to a JSON file:
-        1. All JSON-serializable instance attributes.
-        2. All JSON-serializable class properties.
-        3. Cached results of functions decorated with the `Cached` decorator.
-
-        The file is saved in the directory specified by the `directory` attribute of the object,
-        and the filename is based on the `data_id` attribute.
-
-        Notes:
-            - Ensures the directory exists before attempting to save.
-            - Compares the current data to the last saved state to avoid redundant writes.
-            - Uses a custom JSON encoder (`DateTimeEncoder`) to handle unsupported data types
-              like `datetime.datetime`.
-            - If logging is enabled (`self._json_cache_logging`), applies the `Logger` decorator
-              to log save operations.
-
-        Raises:
-            PermissionError: If the program lacks write permissions for the target directory or file.
-            FileNotFoundError: If the target directory does not exist and cannot be created.
-            json.JSONEncodeError: If the data cannot be serialized to JSON.
-            Exception: For any unexpected errors encountered during the save operation.
-        """
+        """Saves the current state of the object, including cached data, to a JSON file."""
 
         if self._json_cache_logging:
             log_decorator = Logger(override_function_name=f"Saving to {self._json_cache_directory}", mode="short")
@@ -218,6 +167,39 @@ class JSONCache:
             save_method()
         else:
             self._json_cache_save_inner()
+
+    def json_cache_clear(self, function_name: str = None):
+        """Clears cached data.
+        
+        Args:
+            function_name (str, optional): Name of specific function to clear.
+                If None, clears all cached function results.
+        """
+        if function_name is None:
+            self._json_cache_func_cache.clear()
+        else:
+            keys_to_remove = [k for k in self._json_cache_func_cache.keys() if k.startswith(function_name)]
+            for key in keys_to_remove:
+                del self._json_cache_func_cache[key]
+
+    def json_cache_stats(self) -> dict:
+        """Returns statistics about the cache.
+        
+        Returns:
+            dict: Cache statistics including entry count and function breakdown.
+        """
+        stats = {
+            "total_entries": len(self._json_cache_func_cache),
+            "functions": {}
+        }
+        
+        for key in self._json_cache_func_cache:
+            func_name = key.split("(")[0] if "(" in key else key
+            if func_name not in stats["functions"]:
+                stats["functions"][func_name] = 0
+            stats["functions"][func_name] += 1
+        
+        return stats
 
     def _json_cache_save_inner(self):
         try:
@@ -246,31 +228,7 @@ class JSONCache:
                         mode="short")
 
     def _json_cache_load(self):
-        """
-        Loads cached data from a JSON file and restores the object's state.
-
-        This method reads the JSON file specified by the `data_id` and `directory` attributes
-        and populates:
-        1. Instance attributes with the saved data.
-        2. The function cache (`_json_cache_func_cache`) with previously computed results.
-
-        If the file is missing, corrupted, or contains invalid data, the method gracefully handles
-        the issue and logs a warning without disrupting the program.
-
-        Notes:
-            - Cached function results are stored under the `_json_cache_func_cache` key and
-              converted back to their original format where applicable (e.g., converting
-              serialized `datetime` strings to `datetime.datetime` objects).
-            - If logging is enabled (`self._json_cache_logging`), applies the `Logger` decorator
-              to log load operations.
-
-        Raises:
-            FileNotFoundError: If the JSON file does not exist.
-            json.JSONDecodeError: If the JSON file contains invalid JSON.
-            KeyError: If the expected cache structure is not found in the file.
-            ValueError: If the data contains invalid types, such as unparsable date strings.
-            Exception: For any unexpected errors during the load operation.
-        """
+        """Loads cached data from a JSON file and restores the object's state."""
 
         if self._json_cache_logging:
             log_decorator = Logger(override_function_name=f"Loading from {self._json_cache_directory}", mode="short")
@@ -278,7 +236,6 @@ class JSONCache:
             save_method()
         else:
             self._json_cache_load_inner()
-
 
     def _json_cache_load_inner(self):
         try:
@@ -307,7 +264,7 @@ class JSONCache:
                 ttl = self._json_cache_ttl
                 if isinstance(ttl, (int, float)):
                     ttl = timedelta(days=ttl)
-                    if last_save_date  + ttl > datetime.datetime.now():
+                    if last_save_date + ttl > datetime.datetime.now():
                         load_variables_from_cache = True
             if load_variables_from_cache:
                 for key, value in data["_json_cache_variable_cache"].items():
