@@ -132,12 +132,24 @@ processor.json_cache_clear()
 ### Logging Control
 
 ```python
-# Disable logging globally
-from cacherator import JSONCache
-JSONCache.set_logging(False)
+# Three logging levels available
+from cacherator import JSONCache, LogLevel
 
-# Or per instance
-processor = DataProcessor(logging=False)
+# SILENT: No logging
+JSONCache.set_logging(LogLevel.SILENT)
+
+# NORMAL: Errors only (default)
+JSONCache.set_logging(LogLevel.NORMAL)
+
+# VERBOSE: All operations including save/load
+JSONCache.set_logging(LogLevel.VERBOSE)
+
+# Backward compatible boolean API
+JSONCache.set_logging(False)  # SILENT
+JSONCache.set_logging(True)   # NORMAL
+
+# Per-instance control
+processor = DataProcessor(logging=LogLevel.SILENT)
 ```
 
 ## Configuration
@@ -150,7 +162,7 @@ JSONCache(
     directory="cache",         # Cache directory (default: "data/cache")
     clear_cache=False,         # Clear existing cache on init
     ttl=999,                   # Default TTL in days
-    logging=True               # Enable logging
+    logging=True               # Enable logging (True/False or LogLevel)
 )
 ```
 
@@ -258,6 +270,16 @@ Cacherator introduces minimal overhead:
 - **Async**: Full support for async/await syntax
 - **Operating Systems**: Windows, macOS, Linux
 - **Data Types**: All JSON-serializable types plus datetime objects
+
+## Changelog
+
+### Version 1.1.1
+
+- **Fixed**: Critical race condition bug in `@Cached()` decorator for concurrent async operations
+- **Added**: Three-level logging system (SILENT, NORMAL, VERBOSE)
+- **Added**: `LogLevel` enum for granular logging control
+- **Improved**: Code refactoring for better maintainability
+- **Added**: Comprehensive test suite with 39 tests including race condition tests
 
 ## Troubleshooting
 

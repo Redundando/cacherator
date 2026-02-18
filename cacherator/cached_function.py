@@ -56,15 +56,13 @@ class CachedFunction:
 class Cached:
 
     def __init__(self, ttl: float | int | timedelta = None, clear_cache: bool = False):
-        self.cached_function: CachedFunction | None = None
         self.clear_cache = clear_cache
         self.ttl = ttl
         self.run_function_signatures = []
 
-    @property
-    def max_delta(self):
+    def max_delta(self, cached_function: CachedFunction):
         if self.ttl is None:
-            ttl = self.cached_function.self_item._json_cache_ttl
+            ttl = cached_function.self_item._json_cache_ttl
         else:
             ttl = self.ttl
         if isinstance(ttl, (int, float)):
@@ -72,36 +70,36 @@ class Cached:
         else:
             return ttl
 
-    def store_in_class_cache(self):
+    def store_in_class_cache(self, cached_function: CachedFunction):
         """Stores the function result in the instance's cache."""
 
         entry = {
-            "value": self.cached_function.run(), "date": datetime.now()
+            "value": cached_function.run(), "date": datetime.now()
         }
-        obj = self.cached_function.self_item
+        obj = cached_function.self_item
         if not hasattr(obj, '_json_cache_func_cache'):
             setattr(obj, '_json_cache_func_cache', {})
-        obj._json_cache_func_cache[self.cached_function.function_signature] = entry
+        obj._json_cache_func_cache[cached_function.function_signature] = entry
         return entry
 
-    async def store_in_class_cache_async(self):
+    async def store_in_class_cache_async(self, cached_function: CachedFunction):
         """Stores the async function result in the instance's cache."""
 
         entry = {
-            "value": await self.cached_function.run(), "date": datetime.now()
+            "value": await cached_function.run(), "date": datetime.now()
         }
-        obj = self.cached_function.self_item
+        obj = cached_function.self_item
         if not hasattr(obj, '_json_cache_func_cache'):
             setattr(obj, '_json_cache_func_cache', {})
-        obj._json_cache_func_cache[self.cached_function.function_signature] = entry
+        obj._json_cache_func_cache[cached_function.function_signature] = entry
         return entry
 
-    def retrieve_from_class_cache(self):
+    def retrieve_from_class_cache(self, cached_function: CachedFunction):
         """Retrieves the cached result for the current function call."""
 
-        obj = self.cached_function.self_item
+        obj = cached_function.self_item
         if hasattr(obj, '_json_cache_func_cache'):
-            return obj._json_cache_func_cache.get(self.cached_function.function_signature)
+            return obj._json_cache_func_cache.get(cached_function.function_signature)
         return None
 
     def __call__(self, func):
@@ -114,20 +112,20 @@ class Cached:
                 """Executes the wrapped async function with caching logic."""
 
                 # Create a CachedFunction instance to encapsulate this call
-                self.cached_function = CachedFunction(func, args, kwargs)
+                cached_function = CachedFunction(func, args, kwargs)
 
                 # Attempt to retrieve the result from the cache
-                retrieve_from_cache = self.retrieve_from_class_cache()
+                retrieve_from_cache = self.retrieve_from_class_cache(cached_function)
 
-                has_run_this_execution = self.cached_function.function_signature in self.run_function_signatures
+                has_run_this_execution = cached_function.function_signature in self.run_function_signatures
                 can_retrieve_from_cache = not self.clear_cache or has_run_this_execution
 
                 # If clear_cache is not set, the cache exists, and is within TTL, return the cached value
-                if can_retrieve_from_cache and retrieve_from_cache is not None and retrieve_from_cache['date'] + self.max_delta > datetime.now():
+                if can_retrieve_from_cache and retrieve_from_cache is not None and retrieve_from_cache['date'] + self.max_delta(cached_function) > datetime.now():
                     return retrieve_from_cache['value']
                 # Otherwise, compute the result and store it in the cache before returning
-                entry = await self.store_in_class_cache_async()
-                self.run_function_signatures.append(self.cached_function.function_signature)
+                entry = await self.store_in_class_cache_async(cached_function)
+                self.run_function_signatures.append(cached_function.function_signature)
                 return entry['value']
 
             return async_wrapper
@@ -137,20 +135,20 @@ class Cached:
                 """Executes the wrapped function with caching logic."""
 
                 # Create a CachedFunction instance to encapsulate this call
-                self.cached_function = CachedFunction(func, args, kwargs)
+                cached_function = CachedFunction(func, args, kwargs)
 
                 # Attempt to retrieve the result from the cache
-                retrieve_from_cache = self.retrieve_from_class_cache()
+                retrieve_from_cache = self.retrieve_from_class_cache(cached_function)
 
-                has_run_this_execution = self.cached_function.function_signature in self.run_function_signatures
+                has_run_this_execution = cached_function.function_signature in self.run_function_signatures
                 can_retrieve_from_cache = not self.clear_cache or has_run_this_execution
 
                 # If clear_cache is not set, the cache exists, and is within TTL, return the cached value
-                if can_retrieve_from_cache and retrieve_from_cache is not None and retrieve_from_cache['date'] + self.max_delta > datetime.now():
+                if can_retrieve_from_cache and retrieve_from_cache is not None and retrieve_from_cache['date'] + self.max_delta(cached_function) > datetime.now():
                     return retrieve_from_cache['value']
                 # Otherwise, compute the result and store it in the cache before returning
-                entry = self.store_in_class_cache()
-                self.run_function_signatures.append(self.cached_function.function_signature)
+                entry = self.store_in_class_cache(cached_function)
+                self.run_function_signatures.append(cached_function.function_signature)
                 return entry['value']
 
             return wrapper
