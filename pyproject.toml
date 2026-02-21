@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cacherator"
-version = "1.2.1"
+version = "1.2.2"
 description = "Persistent JSON caching for Python with async support - cache function results and object state effortlessly."
 readme = "README.md"
 authors = [

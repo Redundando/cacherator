@@ -135,7 +135,7 @@ class JSONCache:
         self.json_cache_save()
     
     def json_cache_save(self):
-        """Save to local JSON file (L1 cache)."""
+        """Save to local JSON file (L1 cache) and DynamoDB (L2 cache) if enabled."""
         try:
             json_data = self._json_cache_data()
             if self._json_cache_recent_save_data == json_data:
@@ -145,6 +145,8 @@ class JSONCache:
             with open(self._json_cache_filename_with_path, "w", encoding="utf8") as f:
                 json.dump(json_data, f, indent=4, ensure_ascii=False, cls=DateTimeEncoder)
             self._json_cache_recent_save_data = json_data
+            if self._dynamodb_enabled:
+                self._write_to_dynamodb()
         except Exception as e:
             self._log_error(f"Error saving cache: {str(e)}")
     
@@ -181,10 +183,8 @@ class JSONCache:
             self._log_error(f"Error processing cache data: {str(e)}")
     
     def json_cache_save_db(self):
-        """Save to both L1 (local JSON) and L2 (DynamoDB)."""
+        """Deprecated: Use json_cache_save() instead (now syncs to DynamoDB automatically)."""
         self.json_cache_save()
-        if self._dynamodb_enabled:
-            self._write_to_dynamodb()
 
     def json_cache_clear(self, function_name: str = None):
         """Clear cached data from L1 and L2."""

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2024-02-XX
+
+### Fixed
+- **BREAKING FIX**: `json_cache_save()` now automatically syncs to DynamoDB (L2) when enabled, matching documented behavior
+- Previously, `json_cache_save()` only wrote to local JSON (L1), requiring manual calls to `_write_to_dynamodb()`
+
+### Deprecated
+- `json_cache_save_db()` is now redundant (use `json_cache_save()` instead)
+
 ## [1.2.0] - 2024-02-XX
 
 ### Added
