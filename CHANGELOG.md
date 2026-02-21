@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2025-XX-XX
+
+### Added
+- `save_on_del` parameter to `JSONCache.__init__()` (default `False`) — opt-in DynamoDB write on `__del__`
+
+### Changed
+- `__del__` now only saves to local JSON (L1); DynamoDB (L2) write requires explicit `json_cache_save()` or `save_on_del=True`
+- Eliminates unnecessary DynamoDB writes on program exit (e.g. 15 cached URLs no longer trigger 15 put operations)
+
+### Removed
+- Unreliable dirty-check in `json_cache_save()` — saves are always performed when called
+
 ## [1.2.3] - 2025-XX-XX
 
 ### Added

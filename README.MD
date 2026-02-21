@@ -127,6 +127,7 @@ data = scraper.scrape_expensive_data("https://example.com")  # Uses cached data!
 - **Writes**: Saved to both L1 and L2 simultaneously
 - **No table specified**: Works as local-only cache
 - **Compression**: Payloads over 100KB are automatically gzip-compressed before writing to DynamoDB, reducing typical HTML payloads by 80-90%. A warning is logged if the compressed payload still exceeds DynamoDB's 400KB item limit.
+- **save_on_del**: By default, `__del__` only saves to local JSON (L1). Set `save_on_del=True` to also write to DynamoDB on object destruction. Use `json_cache_save()` for explicit L1+L2 saves.
 
 **DynamoDB table:**
 - Auto-created if missing (requires IAM permissions)
@@ -215,7 +216,8 @@ JSONCache(
     clear_cache=False,         # Clear existing cache on init
     ttl=999,                   # Default TTL in days
     logging=True,              # Enable logging (True/False)
-    dynamodb_table=None        # DynamoDB table name (optional)
+    dynamodb_table=None,       # DynamoDB table name (optional)
+    save_on_del=False          # Write to DynamoDB on __del__ (default: False)
 )
 ```
 
@@ -326,6 +328,12 @@ Cacherator introduces minimal overhead:
 - **Optional Dependencies**: boto3 (for DynamoDB backend), dynamorator
 
 ## Changelog
+
+### Version 1.2.4
+
+- **Added**: `save_on_del` parameter (default `False`) — `__del__` no longer writes to DynamoDB unless opted in, eliminating unnecessary writes on program exit
+- **Changed**: `__del__` always saves to local JSON (L1); DynamoDB (L2) write requires explicit `json_cache_save()` or `save_on_del=True`
+- **Removed**: Unreliable dirty-check on `json_cache_save()` — saves are now always performed when called
 
 ### Version 1.2.3
 
