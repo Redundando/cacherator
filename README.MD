@@ -326,6 +326,11 @@ Cacherator introduces minimal overhead:
 
 ## Changelog
 
+### Version 1.2.2
+
+- **Fixed**: `json_cache_save()` now automatically syncs to DynamoDB (L2) when enabled
+- **Deprecated**: `json_cache_save_db()` is now redundant (use `json_cache_save()` instead)
+
 ### Version 1.2.0
 
 - **Added**: Optional DynamoDB backend for cross-machine cache sharing via dynamorator
