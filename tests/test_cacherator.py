@@ -3,7 +3,7 @@ import time
 import shutil
 import asyncio
 import pytest
-from cacherator import JSONCache, Cached, LogLevel
+from cacherator import JSONCache, Cached
 
 
 class TestJSONCache:
@@ -436,7 +436,7 @@ class TestLogging:
                 self.value = 42
 
         obj = TestClass()
-        assert obj._json_cache_logging_level == LogLevel.SILENT
+        assert not obj._json_cache_logging
 
     def test_instance_logging_override(self):
         """Test that instance logging=False works even when global is True"""
@@ -448,29 +448,17 @@ class TestLogging:
                 self.value = 42
 
         obj = TestClass()
-        assert obj._json_cache_logging_level == LogLevel.SILENT
+        assert not obj._json_cache_logging
 
-    def test_log_level_verbose(self):
-        """Test that LogLevel.VERBOSE can be set"""
-        JSONCache.set_logging(LogLevel.VERBOSE)  # Allow verbose logging globally
-        
-        class TestClass(JSONCache):
-            def __init__(self):
-                super().__init__(data_id="test_verbose", directory="test_cache", logging=LogLevel.VERBOSE)
-                self.value = 42
-
-        obj = TestClass()
-        assert obj._json_cache_logging_level == LogLevel.VERBOSE
-
-    def test_log_level_normal(self):
-        """Test that LogLevel.NORMAL is the default"""
+    def test_logging_enabled(self):
+        """Test that logging is enabled by default"""
         class TestClass(JSONCache):
             def __init__(self):
                 super().__init__(data_id="test_normal", directory="test_cache")
                 self.value = 42
 
         obj = TestClass()
-        assert obj._json_cache_logging_level == LogLevel.NORMAL
+        assert obj._json_cache_logging
 
 
 class TestCacheManagement:

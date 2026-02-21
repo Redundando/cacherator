@@ -1,2 +1,0 @@
-python-slugify>=8.0.0
-logorator>=1.0.0

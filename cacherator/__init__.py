@@ -1,4 +1,4 @@
-from .cacherator import JSONCache, Cached, LogLevel
+from .cacherator import JSONCache, Cached
 
-__version__ = "1.1.1"
-__all__ = ["JSONCache", "Cached", "LogLevel"]
+__version__ = "1.2.0"
+__all__ = ["JSONCache", "Cached"]
