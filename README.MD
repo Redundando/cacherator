@@ -126,6 +126,7 @@ data = scraper.scrape_expensive_data("https://example.com")  # Uses cached data!
 - **L2 (DynamoDB)**: Checked on L1 miss, then written to L1
 - **Writes**: Saved to both L1 and L2 simultaneously
 - **No table specified**: Works as local-only cache
+- **Compression**: Payloads over 100KB are automatically gzip-compressed before writing to DynamoDB, reducing typical HTML payloads by 80-90%. A warning is logged if the compressed payload still exceeds DynamoDB's 400KB item limit.
 
 **DynamoDB table:**
 - Auto-created if missing (requires IAM permissions)
@@ -325,6 +326,12 @@ Cacherator introduces minimal overhead:
 - **Optional Dependencies**: boto3 (for DynamoDB backend), dynamorator
 
 ## Changelog
+
+### Version 1.2.3
+
+- **Added**: Automatic gzip compression for DynamoDB payloads exceeding 100KB
+- **Added**: Warning logged when compressed payload still exceeds DynamoDB's 400KB limit
+- **Added**: Compression is transparent — no API changes required
 
 ### Version 1.2.2
 

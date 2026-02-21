@@ -1,4 +1,6 @@
+import base64
 import datetime
+import gzip
 import inspect
 import json
 import os
@@ -7,7 +9,7 @@ from datetime import timedelta
 from hashlib import sha256
 from enum import Enum
 
-from logorator import Logger
+from logorator import Logger, LogLevel
 from slugify import slugify
 
 from .cached_function import Cached
@@ -24,6 +26,8 @@ except ImportError:
 _DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 _MAX_FILENAME_LENGTH = 180
 _TRUNCATE_LENGTH = 140
+_DYNAMODB_COMPRESS_THRESHOLD = 100_000  # bytes
+_DYNAMODB_MAX_SIZE = 400_000  # bytes (DynamoDB 400KB item limit)
 
 
 def is_jsonable(x):
@@ -168,7 +172,10 @@ class JSONCache:
         self._process_loaded_data(data)
     
     def _load_from_dynamodb(self) -> dict:
-        return self._dynamodb.get(self._json_cache_data_id)
+        item = self._dynamodb.get(self._json_cache_data_id)
+        if item and item.get("_compressed"):
+            return json.loads(gzip.decompress(base64.b64decode(item["data"])).decode())
+        return item
     
     def _process_loaded_data(self, data):
         """Process and validate loaded cache data."""
@@ -245,6 +252,17 @@ class JSONCache:
     def _write_to_dynamodb(self):
         json_data = self._json_cache_data()
         ttl_days = self._json_cache_ttl if isinstance(self._json_cache_ttl, (int, float)) else 999
-        self._dynamodb.put(self._json_cache_data_id, json_data, ttl_days)
+        payload = json.dumps(json_data, cls=DateTimeEncoder).encode()
+        if len(payload) > _DYNAMODB_COMPRESS_THRESHOLD:
+            compressed = gzip.compress(payload)
+            if self._should_log():
+                Logger.note(f"Compressing DynamoDB payload for '{self._json_cache_data_id}' ({len(payload):,} -> {len(compressed):,} bytes)", mode="short")
+            if len(compressed) > _DYNAMODB_MAX_SIZE:
+                Logger.note(f"WARNING: Compressed payload for '{self._json_cache_data_id}' ({len(compressed):,} bytes) exceeds DynamoDB 400KB limit - item will not be stored", mode="short")
+                return
+            data = {"_compressed": True, "data": base64.b64encode(compressed).decode()}
+        else:
+            data = json_data
+        self._dynamodb.put(self._json_cache_data_id, data, ttl_days)
 
 
