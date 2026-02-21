@@ -178,6 +178,8 @@ class JSONCache:
             return
         
         self._process_loaded_data(data)
+        if self._dynamodb_enabled:
+            self._write_to_dynamodb()
     
     def _load_from_dynamodb(self) -> dict:
         item = self._dynamodb.get(self._json_cache_data_id)

@@ -81,13 +81,8 @@ class Cached:
             setattr(obj, '_json_cache_func_cache', {})
         obj._json_cache_func_cache[cached_function.function_signature] = entry
         
-        # Auto-save to L1, and L2 if DynamoDB enabled
-        if hasattr(obj, '_dynamodb_enabled') and obj._dynamodb_enabled:
-            if hasattr(obj, 'json_cache_save_db'):
-                obj.json_cache_save_db()
-        elif hasattr(obj, 'json_cache_save'):
+        if hasattr(obj, 'json_cache_save'):
             obj.json_cache_save()
-        
         return entry
 
     async def store_in_class_cache_async(self, cached_function: CachedFunction):
@@ -101,13 +96,8 @@ class Cached:
             setattr(obj, '_json_cache_func_cache', {})
         obj._json_cache_func_cache[cached_function.function_signature] = entry
         
-        # Auto-save to L1, and L2 if DynamoDB enabled
-        if hasattr(obj, '_dynamodb_enabled') and obj._dynamodb_enabled:
-            if hasattr(obj, 'json_cache_save_db'):
-                obj.json_cache_save_db()
-        elif hasattr(obj, 'json_cache_save'):
+        if hasattr(obj, 'json_cache_save'):
             obj.json_cache_save()
-        
         return entry
 
     def retrieve_from_class_cache(self, cached_function: CachedFunction):
