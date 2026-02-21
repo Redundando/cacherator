@@ -245,9 +245,11 @@ class JSONCache:
         ttl = self._json_cache_ttl
         if isinstance(ttl, (int, float)):
             ttl = timedelta(days=ttl)
+        _runtime_vars = {"_dynamodb_enabled", "_save_on_del"}
         if last_save_date + ttl > datetime.datetime.now():
             for key, value in data["_json_cache_variable_cache"].items():
-                setattr(self, key, value)
+                if key not in _runtime_vars:
+                    setattr(self, key, value)
 
     def _load_function_cache_from_data(self, data: dict):
         """Load function cache and convert date strings to datetime."""
