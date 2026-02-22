@@ -127,11 +127,20 @@ class Cached:
                 can_retrieve_from_cache = not self.clear_cache or has_run_this_execution
 
                 # If clear_cache is not set, the cache exists, and is within TTL, return the cached value
+                obj = cached_function.self_item
+                sig = cached_function.function_signature
                 if can_retrieve_from_cache and retrieve_from_cache is not None and retrieve_from_cache['date'] + self.max_delta(cached_function) > datetime.now():
+                    if hasattr(obj, 'cache_status'):
+                        status = obj.cache_status.get(sig, "l1")
+                        obj.cache_status[sig] = status
+                        obj.last_cache_status = status
                     return retrieve_from_cache['value']
                 # Otherwise, compute the result and store it in the cache before returning
                 entry = await self.store_in_class_cache_async(cached_function)
-                self.run_function_signatures.append(cached_function.function_signature)
+                self.run_function_signatures.append(sig)
+                if hasattr(obj, 'cache_status'):
+                    obj.cache_status[sig] = "miss"
+                    obj.last_cache_status = "miss"
                 return entry['value']
 
             return async_wrapper
@@ -150,11 +159,20 @@ class Cached:
                 can_retrieve_from_cache = not self.clear_cache or has_run_this_execution
 
                 # If clear_cache is not set, the cache exists, and is within TTL, return the cached value
+                obj = cached_function.self_item
+                sig = cached_function.function_signature
                 if can_retrieve_from_cache and retrieve_from_cache is not None and retrieve_from_cache['date'] + self.max_delta(cached_function) > datetime.now():
+                    if hasattr(obj, 'cache_status'):
+                        status = obj.cache_status.get(sig, "l1")
+                        obj.cache_status[sig] = status
+                        obj.last_cache_status = status
                     return retrieve_from_cache['value']
                 # Otherwise, compute the result and store it in the cache before returning
                 entry = self.store_in_class_cache(cached_function)
-                self.run_function_signatures.append(cached_function.function_signature)
+                self.run_function_signatures.append(sig)
+                if hasattr(obj, 'cache_status'):
+                    obj.cache_status[sig] = "miss"
+                    obj.last_cache_status = "miss"
                 return entry['value']
 
             return wrapper
