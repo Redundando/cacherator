@@ -17,6 +17,7 @@ Cacherator is a Python library that provides persistent JSON-based caching for c
 - **TTL (Time-To-Live)** - Automatic cache expiration
 - **Selective caching** - Fine-grained control over what gets cached
 - **Cache management** - Built-in methods for inspection and clearing
+- **Cache status tracking** - Per-call hit/miss detection with L1/L2 source
 - **Flexible logging** - Global and per-instance control
 - **DynamoDB backend** - Optional L2 cache for cross-machine sharing
 
@@ -182,6 +183,40 @@ processor.json_cache_clear("process")
 processor.json_cache_clear()
 ```
 
+### Cache Status Tracking
+
+Detect whether a `@Cached` method returned cached data or executed the function, and which cache layer (L1/L2) was used:
+
+```python
+class DataService(JSONCache):
+    def __init__(self):
+        super().__init__(data_id="my-service", ttl=7)
+
+    @Cached(ttl=7)
+    def fetch(self, key: str) -> str:
+        return expensive_operation(key)
+
+svc = DataService()
+
+# last_cache_status is None before any call
+print(svc.last_cache_status)  # None
+
+svc.fetch("foo")
+print(svc.last_cache_status)  # "miss" (first run) or "l1" / "l2" (subsequent runs)
+
+# Full per-call history keyed by function signature
+print(svc.cache_status)
+# {"fetch('foo',){}": "l1"}
+```
+
+**Status values:**
+- `"l1"` — returned from local JSON cache
+- `"l2"` — returned from DynamoDB cache
+- `"miss"` — function was executed (no valid cache entry)
+- `None` — no `@Cached` method has been called yet
+
+`cache_status` is populated on init for all keys loaded from cache, and updated on every `@Cached` call. It is cleared when `json_cache_clear()` is called.
+
 ### Logging Control
 
 ```python
@@ -328,6 +363,12 @@ Cacherator introduces minimal overhead:
 - **Optional Dependencies**: boto3 (for DynamoDB backend), dynamorator
 
 ## Changelog
+
+### Version 1.2.6
+
+- **Added**: `cache_status` dict — per-function-signature hit/miss tracking with L1/L2 source, populated on init and updated on every `@Cached` call
+- **Added**: `last_cache_status` — status of the most recent `@Cached` call (`"l1"`, `"l2"`, `"miss"`, or `None`)
+- **Changed**: `json_cache_clear()` now also clears `cache_status` entries
 
 ### Version 1.2.5
 
