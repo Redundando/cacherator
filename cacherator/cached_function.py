@@ -131,7 +131,7 @@ class Cached:
                 sig = cached_function.function_signature
                 if can_retrieve_from_cache and retrieve_from_cache is not None and retrieve_from_cache['date'] + self.max_delta(cached_function) > datetime.now():
                     if hasattr(obj, 'cache_status'):
-                        status = obj.cache_status.get(sig, "l1")
+                        status = "l1" if obj.cache_status.get(sig) != "l2" else "l2"
                         obj.cache_status[sig] = status
                         obj.last_cache_status = status
                     return retrieve_from_cache['value']
@@ -163,7 +163,7 @@ class Cached:
                 sig = cached_function.function_signature
                 if can_retrieve_from_cache and retrieve_from_cache is not None and retrieve_from_cache['date'] + self.max_delta(cached_function) > datetime.now():
                     if hasattr(obj, 'cache_status'):
-                        status = obj.cache_status.get(sig, "l1")
+                        status = "l1" if obj.cache_status.get(sig) != "l2" else "l2"
                         obj.cache_status[sig] = status
                         obj.last_cache_status = status
                     return retrieve_from_cache['value']
