@@ -17,9 +17,9 @@ Cacherator is a Python library that provides persistent JSON-based caching for c
 - **TTL (Time-To-Live)** - Automatic cache expiration
 - **Selective caching** - Fine-grained control over what gets cached
 - **Cache management** - Built-in methods for inspection and clearing
-- **Cache status tracking** - Per-call hit/miss detection with L1/L2 source
+- **Cache status tracking** - Per-call hit/miss detection
 - **Flexible logging** - Global and per-instance control
-- **DynamoDB backend** - Optional L2 cache for cross-machine sharing
+- **DynamoDB backend** - Optional cloud cache for cross-machine sharing
 
 ## Installation
 
@@ -99,7 +99,7 @@ print(game.score)  # 100 - persisted!
 
 ### DynamoDB Backend (Cross-Machine Cache Sharing)
 
-Enable optional DynamoDB L2 cache for sharing cache across multiple machines:
+Pass `dynamodb_table` to use DynamoDB as the cache backend instead of local JSON:
 
 ```python
 from cacherator import JSONCache, Cached
@@ -110,7 +110,6 @@ class WebScraper(JSONCache):
     
     @Cached(ttl=7)
     def scrape_expensive_data(self, url):
-        # Expensive operation
         return fetch_data(url)
 
 # On machine 1 (laptop)
@@ -123,12 +122,9 @@ data = scraper.scrape_expensive_data("https://example.com")  # Uses cached data!
 ```
 
 **How it works:**
-- **L1 (local JSON)**: Checked first for instant access
-- **L2 (DynamoDB)**: Checked on L1 miss, then written to L1; L1 hits are automatically backfilled to L2
-- **Writes**: Saved to both L1 and L2 simultaneously
-- **No table specified**: Works as local-only cache
+- **No table specified**: saves/loads from local JSON file
+- **Table specified**: saves/loads from DynamoDB only — no local file used
 - **Compression**: Payloads over 100KB are automatically gzip-compressed before writing to DynamoDB, reducing typical HTML payloads by 80-90%. A warning is logged if the compressed payload still exceeds DynamoDB's 400KB item limit.
-- **save_on_del**: By default, `__del__` only saves to local JSON (L1). Set `save_on_del=True` to also write to DynamoDB on object destruction. Use `json_cache_save()` for explicit L1+L2 saves.
 
 **DynamoDB table:**
 - Auto-created if missing (requires IAM permissions)
@@ -185,7 +181,7 @@ processor.json_cache_clear()
 
 ### Cache Status Tracking
 
-Detect whether a `@Cached` method returned cached data or executed the function, and which cache layer (L1/L2) was used:
+Detect whether a `@Cached` method returned cached data or executed the function:
 
 ```python
 class DataService(JSONCache):
@@ -202,16 +198,15 @@ svc = DataService()
 print(svc.last_cache_status)  # None
 
 svc.fetch("foo")
-print(svc.last_cache_status)  # "miss" (first run) or "l1" / "l2" (subsequent runs)
+print(svc.last_cache_status)  # "miss" (first run) or "hit" (subsequent runs)
 
 # Full per-call history keyed by function signature
 print(svc.cache_status)
-# {"fetch('foo',){}": "l1"}
+# {"fetch('foo',){}": "hit"}
 ```
 
 **Status values:**
-- `"l1"` — returned from local JSON cache
-- `"l2"` — returned from DynamoDB cache
+- `"hit"` — returned from cache
 - `"miss"` — function was executed (no valid cache entry)
 - `None` — no `@Cached` method has been called yet
 
@@ -247,12 +242,11 @@ processor = DataProcessor(logging=False)  # Silent mode
 ```python
 JSONCache(
     data_id="unique_id",      # Unique identifier (default: class name)
-    directory="cache",         # Cache directory (default: "data/cache")
+    directory="cache",         # Cache directory (default: "data/cache"), ignored if dynamodb_table set
     clear_cache=False,         # Clear existing cache on init
     ttl=999,                   # Default TTL in days
     logging=True,              # Enable logging (True/False)
-    dynamodb_table=None,       # DynamoDB table name (optional)
-    save_on_del=False          # Write to DynamoDB on __del__ (default: False)
+    dynamodb_table=None,       # DynamoDB table name — uses DynamoDB instead of local JSON if set
 )
 ```
 
@@ -363,6 +357,14 @@ Cacherator introduces minimal overhead:
 - **Optional Dependencies**: boto3 (for DynamoDB backend), dynamorator
 
 ## Changelog
+
+### Version 1.3.0
+
+- **Changed**: Simplified to single-backend model — local JSON (default) or DynamoDB (when `dynamodb_table` is set), never both simultaneously
+- **Changed**: `cache_status` values simplified to `"hit"` / `"miss"` (removed `"l1"` / `"l2"`)
+- **Removed**: `save_on_del` parameter — no longer needed
+- **Removed**: L1→L2 backfill on load
+- **Removed**: Deprecated `json_cache_save_db()` method
 
 ### Version 1.2.6
 

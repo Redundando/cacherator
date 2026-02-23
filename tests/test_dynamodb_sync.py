@@ -41,24 +41,6 @@ class TestDynamoDBSync:
             # Verify DynamoDB put was called
             assert mock_put.called, "json_cache_save() should call DynamoDB put"
     
-    def test_l1_hit_backfills_l2(self):
-        """Verify loading from L1 automatically backfills L2."""
-
-        class TestCache(JSONCache):
-            def __init__(self):
-                super().__init__(
-                    data_id="test-sync",
-                    dynamodb_table="test-table",
-                    clear_cache=False
-                )
-
-        with patch.object(DynamoDBStore, 'put') as mock_put, \
-             patch.object(DynamoDBStore, 'is_enabled', return_value=True), \
-             patch.object(DynamoDBStore, 'get', return_value=None):
-
-            cache = TestCache()
-            assert mock_put.called, "L1 hit should backfill L2 via _write_to_dynamodb"
-
     def test_l1_hit_does_not_backfill_l2_when_disabled(self):
         """Verify no DynamoDB write when DynamoDB is not enabled."""
 

@@ -7,9 +7,8 @@ import os
 import weakref
 from datetime import timedelta
 from hashlib import sha256
-from enum import Enum
 
-from logorator import Logger, LogLevel
+from logorator import Logger
 from slugify import slugify
 
 from .cached_function import Cached
@@ -57,18 +56,16 @@ class JSONCache:
                  clear_cache: bool = False,
                  ttl: timedelta | int | float = 999,
                  logging: bool = True,
-                 dynamodb_table: str = None,
-                 save_on_del: bool = False):
-        """Initialize JSONCache with optional DynamoDB backend.
+                 dynamodb_table: str = None):
+        """Initialize JSONCache.
         
         Args:
             data_id: Unique identifier (defaults to class name)
-            directory: Cache directory (default: "data/cache")
+            directory: Cache directory (default: "data/cache"), ignored when dynamodb_table is set
             clear_cache: Clear existing cache on init
             ttl: Time-to-live in days (default: 999)
             logging: True=log DynamoDB operations, False=silent (default: True)
-            dynamodb_table: DynamoDB table name (enables L2 cache if set)
-            save_on_del: Write to DynamoDB (L2) on __del__ (default: False)
+            dynamodb_table: DynamoDB table name (uses DynamoDB instead of local JSON if set)
         """
         self._json_cache_func_cache = {}
         self.cache_status = {}
@@ -81,13 +78,12 @@ class JSONCache:
         self._json_cache_last_accessed = datetime.datetime.now()
         self._dynamodb = DynamoDBStore(table_name=dynamodb_table, silent=not self._json_cache_logging) if DYNAMODB_AVAILABLE else None
         self._dynamodb_enabled = self._dynamodb.is_enabled() if self._dynamodb else False
-        self._save_on_del = save_on_del
 
         if not self._json_cache_clear_cache:
             self._json_cache_load()
         else:
             self.cache_status = {}
-        weakref.finalize(self, self._finalize_cache)
+        weakref.finalize(self, self.json_cache_save)
 
     def __str__(self):
         return self._json_cache_data_id
@@ -140,50 +136,35 @@ class JSONCache:
         result["_json_cache_func_cache"] = dict(sorted(result["_json_cache_func_cache"].items()))
         return dict(sorted(result.items()))
 
-    def _finalize_cache(self):
-        """Save L1 cache on garbage collection. L2 only if save_on_del=True."""
-        self._json_cache_save_l1()
-        if self._save_on_del and self._dynamodb_enabled:
-            self._write_to_dynamodb()
-    
-    def _json_cache_save_l1(self):
-        """Save to local JSON file (L1) only."""
-        try:
-            if self._json_cache_directory and not os.path.exists(self._json_cache_directory):
-                os.makedirs(self._json_cache_directory, exist_ok=True)
-            json_data = self._json_cache_data()
-            with open(self._json_cache_filename_with_path, "w", encoding="utf8") as f:
-                json.dump(json_data, f, indent=4, ensure_ascii=False, cls=DateTimeEncoder)
-        except Exception as e:
-            self._log_error(f"Error saving cache: {str(e)}")
-
     def json_cache_save(self):
-        """Save to local JSON file (L1 cache) and DynamoDB (L2 cache) if enabled."""
+        """Save to the active backend (local JSON or DynamoDB)."""
         try:
-            self._json_cache_save_l1()
             if self._dynamodb_enabled:
                 self._write_to_dynamodb()
+            else:
+                if self._json_cache_directory and not os.path.exists(self._json_cache_directory):
+                    os.makedirs(self._json_cache_directory, exist_ok=True)
+                json_data = self._json_cache_data()
+                with open(self._json_cache_filename_with_path, "w", encoding="utf8") as f:
+                    json.dump(json_data, f, indent=4, ensure_ascii=False, cls=DateTimeEncoder)
         except Exception as e:
             self._log_error(f"Error saving cache: {str(e)}")
     
     def _json_cache_load(self):
-        """Load from local JSON file (L1) or DynamoDB (L2)."""
+        """Load from the active backend (local JSON or DynamoDB)."""
         try:
-            with open(self._json_cache_filename_with_path, encoding="utf8") as f:
-                data = json.load(f)
-        except FileNotFoundError:
             if self._dynamodb_enabled:
                 data = self._load_from_dynamodb()
                 if data:
-                    self._process_loaded_data(data, source="l2")
+                    self._process_loaded_data(data)
+            else:
+                with open(self._json_cache_filename_with_path, encoding="utf8") as f:
+                    data = json.load(f)
+                self._process_loaded_data(data)
+        except FileNotFoundError:
             return
         except Exception as e:
             self._log_error(f"Error loading cache: {str(e)}")
-            return
-        
-        self._process_loaded_data(data, source="l1")
-        if self._dynamodb_enabled:
-            self._write_to_dynamodb()
     
     def _load_from_dynamodb(self) -> dict:
         item = self._dynamodb.get(self._json_cache_data_id)
@@ -191,23 +172,19 @@ class JSONCache:
             return json.loads(gzip.decompress(base64.b64decode(item["data"])).decode())
         return item
     
-    def _process_loaded_data(self, data, source="l1"):
+    def _process_loaded_data(self, data):
         """Process and validate loaded cache data."""
         if not isinstance(data, dict) or "_json_cache_func_cache" not in data:
             self._log_error("Invalid cache structure")
             return
         try:
             self._load_variables_from_data(data)
-            self._load_function_cache_from_data(data, source=source)
+            self._load_function_cache_from_data(data)
         except Exception as e:
             self._log_error(f"Error processing cache data: {str(e)}")
     
-    def json_cache_save_db(self):
-        """Deprecated: Use json_cache_save() instead (now syncs to DynamoDB automatically)."""
-        self.json_cache_save()
-
     def json_cache_clear(self, function_name: str = None):
-        """Clear cached data from L1 and L2."""
+        """Clear cached data."""
         if function_name is None:
             self._json_cache_func_cache.clear()
             self.cache_status.clear()
@@ -251,13 +228,11 @@ class JSONCache:
         ttl = self._json_cache_ttl
         if isinstance(ttl, (int, float)):
             ttl = timedelta(days=ttl)
-        _runtime_vars = {"_dynamodb_enabled", "_save_on_del"}
         if last_save_date + ttl > datetime.datetime.now():
             for key, value in data["_json_cache_variable_cache"].items():
-                if key not in _runtime_vars:
-                    setattr(self, key, value)
+                setattr(self, key, value)
 
-    def _load_function_cache_from_data(self, data: dict, source: str = "l1"):
+    def _load_function_cache_from_data(self, data: dict):
         """Load function cache and convert date strings to datetime."""
         for key, value in data["_json_cache_func_cache"].items():
             self._json_cache_func_cache[key] = value
@@ -265,7 +240,7 @@ class JSONCache:
                 self._json_cache_func_cache[key]["date"] = datetime.datetime.strptime(
                     value["date"], _DATETIME_FORMAT
                 )
-            self.cache_status[key] = source
+            self.cache_status[key] = "hit"
     
     def _write_to_dynamodb(self):
         json_data = self._json_cache_data()
